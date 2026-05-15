@@ -1,0 +1,36 @@
+{
+  "manifest_version": 3,
+  "name": "ShopGmail9999 Cookie Importer",
+  "version": "1.3.0",
+  "description": "Mua + Import cookie Gmail 1 click. Tích hợp shopgmail9999.com API + automation qua externally_connectable.",
+  "permissions": [
+    "cookies",
+    "tabs",
+    "browsingData",
+    "storage"
+  ],
+  "host_permissions": [
+    "<all_urls>"
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "ShopGmail9999 Tool"
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "externally_connectable": {
+    "matches": [
+      "*://shopgmail9999.com/*",
+      "*://*.shopgmail9999.com/*",
+      "http://localhost/*",
+      "http://127.0.0.1/*"
+    ]
+  },
+  "web_accessible_resources": [
+    {
+      "resources": ["config.json"],
+      "matches": ["<all_urls>"]
+    }
+  ]
+}

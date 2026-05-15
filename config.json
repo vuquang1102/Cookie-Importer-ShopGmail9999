@@ -1,0 +1,10 @@
+{
+  "_comment": "Mở file này, paste API key của bạn vào field apikey, save, reload extension. Lần đầu mở popup sẽ tự load. Sau đó được cache trong chrome.storage.local — sửa file này không còn tác dụng cho profile hiện tại trừ khi clear storage.",
+  "apikey": "",
+  "autoImport": true,
+  "autoRetry": false,
+  "retryDelaySeconds": 3,
+  "defaultClearBefore": true,
+  "defaultClearStorage": true,
+  "defaultOpenAfter": true
+}

@@ -1,0 +1,22 @@
+# OS junk
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editors
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Local config với API key thật (nếu tách ra ngoài config.json default)
+config.local.json
+
+# Logs / tmp
+*.log
+*.tmp
+
+# Build outputs nếu sau này có
+dist/
+build/
+node_modules/

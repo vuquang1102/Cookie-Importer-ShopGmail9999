@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <title>Import Cookie Gmail</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <header>
+    <h1>🍪 Gmail Cookie Tool</h1>
+    <p class="subtitle">ShopGmail9999 — Mua &amp; Import 1 click</p>
+  </header>
+
+  <div class="tabs">
+    <button class="tab active" data-tab="buy">💰 Mua mới</button>
+    <button class="tab" data-tab="import">📥 Import file</button>
+    <button class="tab" data-tab="guide">📚 Hướng dẫn</button>
+  </div>
+
+  <!-- ============ TAB: MUA MỚI ============ -->
+  <section id="tab-buy" class="tab-content active">
+    <div class="card">
+      <label class="lbl" for="apikeyInput">API Key (lấy ở shopgmail9999.com → Thông tin tài khoản):</label>
+      <div class="row">
+        <input type="password" id="apikeyInput" placeholder="API key của bạn...">
+        <button id="toggleKeyBtn" class="small" title="Hiện/ẩn">👁</button>
+        <button id="saveKeyBtn" class="small">Save</button>
+      </div>
+      <div class="hint">API key chỉ lưu local (<code>chrome.storage.local</code>), không gửi đi đâu ngoài shopgmail9999.com.</div>
+    </div>
+
+    <button id="loadProductsBtn" class="secondary">🔄 Tải danh sách sản phẩm</button>
+
+    <div class="card" id="productsCard" style="display:none">
+      <label class="lbl" for="productSelect">Sản phẩm:</label>
+      <select id="productSelect"></select>
+
+      <div class="row mt8">
+        <label class="inline">Số lượng:</label>
+        <input type="number" id="quantityInput" min="1" max="50" value="1">
+      </div>
+
+      <div id="priceInfo" class="info-box"></div>
+
+      <div class="options mt8">
+        <label><input type="checkbox" id="autoImportChk" checked> Auto-import cookie sau khi mua (không hỏi gì cả)</label>
+        <label>
+          <input type="checkbox" id="autoRetryChk">
+          Auto retry đến khi mua thành công, cách
+          <input type="number" id="retryDelayInput" min="1" max="600" value="3" class="inline-num"> giây
+        </label>
+      </div>
+
+      <button id="buyBtn" class="primary mt8">💳 Mua ngay</button>
+    </div>
+
+    <div id="buyResult" class="card" style="display:none">
+      <strong>✅ Đã mua thành công</strong>
+      <div id="accountSummary" class="mt8"></div>
+      <textarea id="accountsText" rows="4" readonly class="mt8"></textarea>
+      <div class="row mt8">
+        <button id="copyAccountsBtn" class="small">📋 Copy email|pass</button>
+        <button id="importBoughtBtn" class="primary">Import account đầu tiên</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ TAB: IMPORT TỪ FILE ============ -->
+  <section id="tab-import" class="tab-content">
+    <div class="card">
+      <label for="cookieInput" class="lbl">Paste cookie JSON (định dạng Cookie-Editor):</label>
+      <textarea id="cookieInput" rows="8" placeholder='[{"name":"SID","value":"...","domain":".google.com",...}, ...]'></textarea>
+    </div>
+
+    <div class="card options">
+      <label><input type="checkbox" id="clearBefore" checked> Xóa cookie Google cũ trước khi import</label>
+      <label><input type="checkbox" id="clearStorage" checked> Clear localStorage / IndexedDB / SW</label>
+      <label><input type="checkbox" id="openAfter" checked> Mở <code>accounts.google.com</code> sau khi xong</label>
+    </div>
+
+    <button id="importBtn" class="primary">Import &amp; Login</button>
+
+    <div class="divider">— hoặc —</div>
+
+    <button id="deleteAllBtn" class="danger">🗑️ Xóa TẤT CẢ cookies trong trình duyệt</button>
+    <div class="hint center">Dùng khi bị xung đột nặng. Sẽ logout mọi website.</div>
+  </section>
+
+  <!-- ============ TAB: HƯỚNG DẪN ============ -->
+  <section id="tab-guide" class="tab-content">
+    <div class="guide">
+      <h3>🚀 Bắt đầu</h3>
+      <ol>
+        <li>Vào <a href="https://shopgmail9999.com/" target="_blank">shopgmail9999.com</a> → đăng nhập → vào <strong>Thông tin tài khoản</strong> → copy <strong>API Key</strong>.</li>
+        <li>Mở tab <strong>💰 Mua mới</strong> → paste API key → click <strong>Save</strong>.</li>
+        <li>Click <strong>🔄 Tải danh sách sản phẩm</strong> → chọn sản phẩm + số lượng → <strong>💳 Mua ngay</strong>.</li>
+        <li>Nếu bật <em>Auto-import</em> (mặc định) → cookie tự import + mở tab <code>accounts.google.com</code> đã login.</li>
+      </ol>
+
+      <h3>⚠️ Setup 1 lần — TẮT DBSC</h3>
+      <p>Bắt buộc để cookie không bị Google sign-out:</p>
+      <ol>
+        <li>Mở <code>chrome://flags</code></li>
+        <li>Search: <code>Bound Session Credentials</code> → set <strong>Disabled</strong></li>
+        <li>Click <strong>Relaunch</strong></li>
+      </ol>
+
+      <h3>📝 Pre-fill API key qua config.json</h3>
+      <p>Để distribute extension cho nhiều máy mà không cần gõ API key lần đầu:</p>
+      <ol>
+        <li>Mở folder extension → file <code>config.json</code></li>
+        <li>Paste API key vào field <code>"apikey"</code></li>
+        <li>Set <code>"autoImport"</code> / <code>"autoRetry"</code> / <code>"retryDelaySeconds"</code> nếu muốn default khác</li>
+        <li>Reload extension trong <code>chrome://extensions</code></li>
+      </ol>
+      <pre class="code">{
+  "apikey": "PASTE_KEY",
+  "autoImport": true,
+  "autoRetry": false,
+  "retryDelaySeconds": 3
+}</pre>
+      <p class="hint">Lưu ý: <code>config.json</code> chỉ load khi <code>chrome.storage.local</code> chưa có key. Để force load lại: xoá storage qua <code>chrome://settings/cookies</code> → search extension → Remove.</p>
+
+      <h3>🤖 Automation với Selenium / Web</h3>
+      <p>Extension expose API qua <code>chrome.runtime.onMessageExternal</code> cho các trang web matching:</p>
+      <ul>
+        <li><code>*://shopgmail9999.com/*</code></li>
+        <li><code>http://localhost/*</code></li>
+        <li><code>http://127.0.0.1/*</code></li>
+      </ul>
+
+      <p><strong>Extension ID</strong>: <code id="extIdDisplay">đang load...</code> <button id="copyExtIdBtn" class="small">📋 Copy</button></p>
+
+      <h3>📡 6 Action API</h3>
+      <table class="api-table">
+        <thead><tr><th>Action</th><th>Params</th><th>Response</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><code>getState</code></td>
+            <td>—</td>
+            <td><code>{ success, hasApikey, autoImport, version }</code></td>
+          </tr>
+          <tr>
+            <td><code>setApiKey</code></td>
+            <td><code>apikey</code></td>
+            <td><code>{ success }</code></td>
+          </tr>
+          <tr>
+            <td><code>fetchProducts</code></td>
+            <td><code>apikey?</code> (optional, fallback storage)</td>
+            <td><code>{ success, listproduct: [{id, name, price, quantity}] }</code></td>
+          </tr>
+          <tr>
+            <td><code>buyProduct</code></td>
+            <td><code>productId, quantity, autoImport?, autoRetry?, retryDelaySeconds?, maxRetries?, importOptions?</code></td>
+            <td><code>{ success, data, attempts, imported?, firstAccount? }</code></td>
+          </tr>
+          <tr>
+            <td><code>import</code></td>
+            <td><code>cookies: [], options: { clearBefore, clearStorage, openAfter }</code></td>
+            <td><code>{ imported, skipped, log }</code></td>
+          </tr>
+          <tr>
+            <td><code>deleteAll</code></td>
+            <td>—</td>
+            <td><code>{ total, removed, failed }</code></td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h3>💻 Ví dụ JavaScript (chạy trong console của shopgmail9999.com)</h3>
+      <pre class="code">// 1. Set API key
+chrome.runtime.sendMessage(
+  "EXT_ID",
+  { action: "setApiKey", apikey: "your-key" },
+  resp =&gt; console.log(resp)
+);
+
+// 2. Mua + auto-import + auto-retry
+chrome.runtime.sendMessage(
+  "EXT_ID",
+  {
+    action: "buyProduct",
+    productId: 4,
+    quantity: 1,
+    autoImport: true,
+    autoRetry: true,
+    retryDelaySeconds: 5,
+    maxRetries: 0   // 0 = unlimited
+  },
+  resp =&gt; {
+    console.log("Attempts:", resp.attempts);
+    console.log("Account:", resp.firstAccount);
+  }
+);</pre>
+
+      <h3>🐍 Ví dụ Selenium Python</h3>
+      <pre class="code">from selenium import webdriver
+from selenium.webdriver.chrome.options import Options
+
+opts = Options()
+opts.add_argument("--load-extension=/path/to/cookie-importer")
+driver = webdriver.Chrome(options=opts)
+
+EXT_ID = "EXTENSION_ID"
+driver.get("https://shopgmail9999.com/")
+
+# Mua + tự retry tới khi có hàng + tự import cookie
+result = driver.execute_async_script("""
+  const cb = arguments[arguments.length - 1];
+  chrome.runtime.sendMessage(arguments[0], {
+    action: "buyProduct",
+    productId: 4, quantity: 1,
+    autoImport: true, autoRetry: true,
+    retryDelaySeconds: 5
+  }, resp =&gt; cb(resp));
+""", EXT_ID)
+
+print(result["firstAccount"])  # {email, password}
+# Driver đã được set cookie Gmail → mở gmail.com là login luôn</pre>
+
+      <h3>🔷 Ví dụ Selenium C#</h3>
+      <pre class="code">var options = new ChromeOptions();
+options.AddArgument($"--load-extension={extensionPath}");
+using var driver = new ChromeDriver(options);
+
+const string EXT_ID = "EXTENSION_ID";
+driver.Navigate().GoToUrl("https://shopgmail9999.com/");
+
+var js = (IJavaScriptExecutor)driver;
+var result = js.ExecuteAsyncScript(@"
+  const cb = arguments[arguments.length - 1];
+  chrome.runtime.sendMessage(arguments[0], {
+    action: 'buyProduct',
+    productId: 4, quantity: 1,
+    autoImport: true, autoRetry: true
+  }, resp =&gt; cb(resp));
+", EXT_ID);
+
+Console.WriteLine(result);</pre>
+
+      <h3>❓ Troubleshooting</h3>
+      <ul>
+        <li><strong>"chrome.runtime is undefined"</strong> trên page → page không matching <code>externally_connectable</code>. Phải vào shopgmail9999.com hoặc localhost.</li>
+        <li><strong>Google sign-out sau import</strong> → chưa tắt DBSC flag, hoặc đang sync Chrome với account khác.</li>
+        <li><strong>Cookie skip nhiều</strong> → file cookie không đúng format Cookie-Editor. Xem placeholder textarea tab Import.</li>
+        <li><strong>Mua fail liên tục</strong> → check số dư + sản phẩm còn stock + API key đúng.</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- ============ COMMON ============ -->
+  <div id="status" class="status"></div>
+  <pre id="log" class="log"></pre>
+
+  <div class="warning">
+    <strong>⚠️ Nếu Google sign-out sau import:</strong>
+    <ol>
+      <li><code>chrome://flags</code> → <code>Bound Session Credentials</code> → <strong>Disabled</strong> → Relaunch.</li>
+      <li>Tắt Chrome Sync nếu đang sync với account khác.</li>
+      <li>Tab Import → 🗑️ "Xóa TẤT CẢ cookies" → đóng/mở Chrome → mua/import lại.</li>
+    </ol>
+  </div>
+
+  <footer>
+    <small>v1.3.0 — không upload data ra ngoài</small>
+  </footer>
+
+  <script src="popup.js"></script>
+</body>
+</html>
