@@ -38,7 +38,7 @@ Vào `chrome://extensions` → tìm extension → copy **ID** (chuỗi 32 ký t�
 | `setApiKey` | `apikey` | `{ success }` |
 | `fetchProducts` | `apikey` (optional, fallback storage) | `{ success, listproduct: [{id,name,price,quantity}] }` |
 | `buyProduct` | `productId`, `quantity`, `autoImport?`, `autoRetry?`, `retryDelaySeconds?`, `maxRetries?`, `importOptions?` | `{ success, message, data, attempts, imported?, firstAccount? }` |
-| `import` | `cookies: []`, `options: { clearBefore, clearStorage, openAfter }` | `{ imported, skipped, log: [] }` |
+| `import` | `cookies: []`, `options: { clearBefore, clearStorage, openAfter, incognito }` | `{ imported, skipped, log: [] }` |
 | `deleteAll` | — | `{ total, removed, failed }` |
 
 ### Ví dụ JavaScript trên trang web
@@ -142,6 +142,13 @@ Console.WriteLine(result); // dictionary với firstAccount/imported
 - Response của `buyProduct` với `autoImport: true` có thêm field `imported` (cookie import stats) + `firstAccount` (email/pass đã mua).
 
 ## Changelog
+
+**v1.4.0** — Fix login ở chế độ ẩn danh
+- **Nguyên nhân lỗi cũ:** `chrome.cookies.set` không truyền `storeId` → cookie chỉ ghi vào store của profile thường. Cửa sổ ẩn danh có cookie store RIÊNG → mở Gmail ẩn danh bị bắt nhập lại email/pass.
+- **Fix:** import + clear cookie giờ chạy trên **mọi cookie store** (thường + ẩn danh nếu cửa sổ ẩn danh đang mở). `deleteAll` cũng quét mọi store.
+- Thêm option `incognito` cho action `import` + checkbox **"🕵️ Login trong cửa sổ ẩn danh"** (tab Import & tab Mua mới). Khi bật, extension tự mở/dùng 1 cửa sổ ẩn danh, ghi cookie vào đúng store đó rồi mở `accounts.google.com` trong cửa sổ ẩn danh.
+- `manifest.json`: khai báo `"incognito": "spanning"`.
+- ⚠️ **Bắt buộc 1 lần:** vào `chrome://extensions` → Details → bật **"Cho phép ở chế độ ẩn danh" (Allow in Incognito)**. Không bật thì Chrome không cho extension đụng tới store ẩn danh.
 
 **v1.3.0**
 - Khi mở popup, nếu API key đã có sẵn (storage hoặc config.json) → tự động tải danh sách sản phẩm, không phải click thủ công.

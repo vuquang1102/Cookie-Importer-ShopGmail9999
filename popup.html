@@ -47,6 +47,7 @@
 
       <div class="options mt8">
         <label><input type="checkbox" id="autoImportChk" checked> Auto-import cookie sau khi mua (không hỏi gì cả)</label>
+        <label><input type="checkbox" id="buyIncognitoChk"> 🕵️ Login trong cửa sổ <strong>ẩn danh</strong> sau khi import</label>
         <label>
           <input type="checkbox" id="autoRetryChk">
           Auto retry đến khi mua thành công, cách
@@ -79,6 +80,7 @@
       <label><input type="checkbox" id="clearBefore" checked> Xóa cookie Google cũ trước khi import</label>
       <label><input type="checkbox" id="clearStorage" checked> Clear localStorage / IndexedDB / SW</label>
       <label><input type="checkbox" id="openAfter" checked> Mở <code>accounts.google.com</code> sau khi xong</label>
+      <label><input type="checkbox" id="openIncognito"> 🕵️ Login trong cửa sổ <strong>ẩn danh</strong> (cần bật "Cho phép ở chế độ ẩn danh")</label>
     </div>
 
     <button id="importBtn" class="primary">Import &amp; Login</button>
@@ -99,6 +101,15 @@
         <li>Click <strong>🔄 Tải danh sách sản phẩm</strong> → chọn sản phẩm + số lượng → <strong>💳 Mua ngay</strong>.</li>
         <li>Nếu bật <em>Auto-import</em> (mặc định) → cookie tự import + mở tab <code>accounts.google.com</code> đã login.</li>
       </ol>
+
+      <h3>🕵️ Muốn login ở chế độ ẩn danh?</h3>
+      <p>Cookie của cửa sổ ẩn danh <strong>tách biệt</strong> với cửa sổ thường. Để import vào được ẩn danh:</p>
+      <ol>
+        <li>Mở <code>chrome://extensions</code> → tìm extension này → <strong>Chi tiết (Details)</strong></li>
+        <li>Bật <strong>"Cho phép ở chế độ ẩn danh" (Allow in Incognito)</strong></li>
+        <li>Khi import, tick ô <strong>🕵️ Login trong cửa sổ ẩn danh</strong> — extension sẽ tự mở cửa sổ ẩn danh và login vào đó.</li>
+      </ol>
+      <p class="hint">Từ v1.4.0, cookie luôn được ghi vào <strong>cả</strong> store thường lẫn ẩn danh (nếu cửa sổ ẩn danh đang mở), nên mở Gmail ở chế độ nào cũng login được.</p>
 
       <h3>⚠️ Setup 1 lần — TẮT DBSC</h3>
       <p>Bắt buộc để cookie không bị Google sign-out:</p>
@@ -160,7 +171,7 @@
           </tr>
           <tr>
             <td><code>import</code></td>
-            <td><code>cookies: [], options: { clearBefore, clearStorage, openAfter }</code></td>
+            <td><code>cookies: [], options: { clearBefore, clearStorage, openAfter, incognito }</code></td>
             <td><code>{ imported, skipped, log }</code></td>
           </tr>
           <tr>
@@ -244,6 +255,7 @@ Console.WriteLine(result);</pre>
 
       <h3>❓ Troubleshooting</h3>
       <ul>
+        <li><strong>Mở tab ẩn danh bắt nhập email/pass (không login)</strong> → cookie ẩn danh tách biệt với cửa sổ thường. Bật "Cho phép ở chế độ ẩn danh" (xem mục 🕵️ ở trên) + tick ô "Login trong cửa sổ ẩn danh" khi import.</li>
         <li><strong>"chrome.runtime is undefined"</strong> trên page → page không matching <code>externally_connectable</code>. Phải vào shopgmail9999.com hoặc localhost.</li>
         <li><strong>Google sign-out sau import</strong> → chưa tắt DBSC flag, hoặc đang sync Chrome với account khác.</li>
         <li><strong>Cookie skip nhiều</strong> → file cookie không đúng format Cookie-Editor. Xem placeholder textarea tab Import.</li>
@@ -266,7 +278,7 @@ Console.WriteLine(result);</pre>
   </div>
 
   <footer>
-    <small>v1.3.0 — không upload data ra ngoài</small>
+    <small>v1.4.0 — không upload data ra ngoài</small>
   </footer>
 
   <script src="popup.js"></script>

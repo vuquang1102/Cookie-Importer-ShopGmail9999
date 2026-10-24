@@ -32,6 +32,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   const quantityInput   = document.getElementById('quantityInput');
   const priceInfo       = document.getElementById('priceInfo');
   const autoImportChk   = document.getElementById('autoImportChk');
+  const buyIncognitoChk = document.getElementById('buyIncognitoChk');
   const autoRetryChk    = document.getElementById('autoRetryChk');
   const retryDelayInput = document.getElementById('retryDelayInput');
   const buyBtn          = document.getElementById('buyBtn');
@@ -329,7 +330,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     await runImport(cookies, {
       clearBefore: true,
       clearStorage: true,
-      openAfter: true
+      openAfter: true,
+      incognito: buyIncognitoChk.checked
     }, `Auto-import ${first.email}`);
   }
 
@@ -366,7 +368,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     await runImport(cookies, {
       clearBefore: true,
       clearStorage: true,
-      openAfter: true
+      openAfter: true,
+      incognito: buyIncognitoChk.checked
     }, `Import cookie cho ${first.email}`);
   });
 
@@ -407,7 +410,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     const options = {
       clearBefore : document.getElementById('clearBefore').checked,
       clearStorage: document.getElementById('clearStorage').checked,
-      openAfter   : document.getElementById('openAfter').checked
+      openAfter   : document.getElementById('openAfter').checked,
+      incognito   : document.getElementById('openIncognito').checked
     };
 
     await runImport(cookies, options, 'Import cookie từ file');

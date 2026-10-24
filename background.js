@@ -180,40 +180,119 @@ async function buyProduct(apikey, productId, quantity) {
   return data; // { success, message, data: { trans_id, quantity, total, accounts: [...] } }
 }
 
+// ============== COOKIE STORES (normal + incognito) ==============
+
+// Lấy id tất cả cookie store hiện có.
+// Profile thường = 1 store; nếu đang mở cửa sổ ẩn danh (và extension được bật
+// "Cho phép ở chế độ ẩn danh") sẽ có thêm store ẩn danh. Cookie 2 store TÁCH BIỆT:
+// ghi vào store thường mà mở Gmail ở tab ẩn danh sẽ KHÔNG login được → phải ghi cả 2.
+async function getAllStoreIds() {
+  try {
+    const stores = await chrome.cookies.getAllCookieStores();
+    const ids = stores.map(s => s.id);
+    return ids.length ? ids : [undefined];
+  } catch (_) {
+    return [undefined];
+  }
+}
+
+// Đảm bảo có 1 cửa sổ ẩn danh (tạo mới nếu chưa có) và trả về windowId + storeId của nó.
+// Throw nếu extension chưa được bật "Cho phép ở chế độ ẩn danh".
+async function ensureIncognitoWindow() {
+  const wins = await chrome.windows.getAll({ populate: true });
+  let w = wins.find(x => x.incognito);
+  if (!w) {
+    w = await chrome.windows.create({ incognito: true, url: 'about:blank' });
+    await sleep(250); // chờ Chrome khởi tạo store ẩn danh
+  }
+  // Lấy tab bất kỳ của cửa sổ ẩn danh để map ra storeId
+  let tabId = w.tabs && w.tabs[0] ? w.tabs[0].id : null;
+  if (tabId == null) {
+    try {
+      const tabs = await chrome.tabs.query({ windowId: w.id });
+      if (tabs[0]) tabId = tabs[0].id;
+    } catch (_) { /* ignore */ }
+  }
+  let storeId = null;
+  try {
+    const stores = await chrome.cookies.getAllCookieStores();
+    if (tabId != null) {
+      const st = stores.find(s => s.tabIds && s.tabIds.includes(tabId));
+      if (st) storeId = st.id;
+    }
+  } catch (_) { /* ignore */ }
+  return { windowId: w.id, storeId };
+}
+
 // ============== DELETE ALL COOKIES (nuclear option) ==============
 
 async function deleteAllCookies() {
-  const all = await chrome.cookies.getAll({});
+  const storeIds = await getAllStoreIds();
+  let total = 0;
   let removed = 0;
   let failed = 0;
 
-  for (const c of all) {
-    const cleanDomain = c.domain.replace(/^\./, '');
-    const proto = c.secure ? 'https' : 'http';
-    const url = `${proto}://${cleanDomain}${c.path || '/'}`;
+  for (const sid of storeIds) {
+    let all = [];
     try {
-      await chrome.cookies.remove({
-        url,
-        name: c.name,
-        storeId: c.storeId
-      });
-      removed++;
+      all = await chrome.cookies.getAll(sid != null ? { storeId: sid } : {});
     } catch (_) {
-      failed++;
+      continue;
+    }
+    total += all.length;
+    for (const c of all) {
+      const cleanDomain = c.domain.replace(/^\./, '');
+      const proto = c.secure ? 'https' : 'http';
+      const url = `${proto}://${cleanDomain}${c.path || '/'}`;
+      try {
+        await chrome.cookies.remove({
+          url,
+          name: c.name,
+          storeId: c.storeId
+        });
+        removed++;
+      } catch (_) {
+        failed++;
+      }
     }
   }
 
-  return { total: all.length, removed, failed };
+  return { total, removed, failed };
 }
 
 async function handleImport({ cookies, options }) {
+  options = options || {};
   const log = [];
   let imported = 0;
   let skipped  = 0;
 
+  // Nếu yêu cầu mở ẩn danh: đảm bảo có cửa sổ ẩn danh TRƯỚC khi ghi cookie,
+  // để store ẩn danh tồn tại và được getAllStoreIds() liệt kê.
+  let incogWindowId = null;
+  if (options.incognito) {
+    try {
+      const r = await ensureIncognitoWindow();
+      incogWindowId = r.windowId;
+      log.push(`[Ẩn danh] Dùng cửa sổ ẩn danh (store=${r.storeId ?? '?'})`);
+    } catch (e) {
+      return {
+        imported: 0,
+        skipped: cookies.length,
+        log: [
+          `[LỖI] Không mở được cửa sổ ẩn danh: ${e.message}`,
+          '→ Vào chrome://extensions → bật "Cho phép ở chế độ ẩn danh (Allow in Incognito)" cho extension này, rồi thử lại.'
+        ]
+      };
+    }
+  }
+
+  // Ghi cookie vào MỌI store (thường + ẩn danh nếu có) để login được ở cả 2 chế độ.
+  const storeIds = await getAllStoreIds();
+  log.push(`[Store] Ghi cookie vào ${storeIds.length} store: ${storeIds.map(s => s ?? 'default').join(', ')}`);
+
   if (options.clearBefore) {
-    const removed = await clearGoogleCookies();
-    log.push(`[Clear] Đã xóa ${removed} cookies Google cũ`);
+    const removed = await clearGoogleCookies(storeIds);
+    log.push(`[Clear] Đã xóa ${removed} cookies Google cũ (mọi store)`);
   }
 
   if (options.clearStorage) {
@@ -232,18 +311,27 @@ async function handleImport({ cookies, options }) {
   }
 
   for (const raw of cookies) {
-    try {
-      const fixed = fixCookie(raw);
-      if (!fixed) {
-        skipped++;
-        log.push(`[Skip] ${raw.name || '?'}@${raw.domain || '?'} — thiếu name/domain`);
-        continue;
-      }
-      await chrome.cookies.set(fixed);
-      imported++;
-    } catch (e) {
+    const fixed = fixCookie(raw);
+    if (!fixed) {
       skipped++;
-      log.push(`[Fail] ${raw.name}@${raw.domain}: ${e.message}`);
+      log.push(`[Skip] ${raw.name || '?'}@${raw.domain || '?'} — thiếu name/domain`);
+      continue;
+    }
+    let okAny = false;
+    let lastErr = '';
+    for (const sid of storeIds) {
+      try {
+        await chrome.cookies.set(sid != null ? { ...fixed, storeId: sid } : fixed);
+        okAny = true;
+      } catch (e) {
+        lastErr = e.message;
+      }
+    }
+    if (okAny) {
+      imported++;
+    } else {
+      skipped++;
+      log.push(`[Fail] ${raw.name}@${raw.domain}: ${lastErr}`);
     }
   }
 
@@ -251,7 +339,12 @@ async function handleImport({ cookies, options }) {
 
   if (options.openAfter) {
     try {
-      await chrome.tabs.create({ url: 'https://accounts.google.com' });
+      if (incogWindowId != null) {
+        // Mở trong CHÍNH cửa sổ ẩn danh đã ghi cookie
+        await chrome.tabs.create({ windowId: incogWindowId, url: 'https://accounts.google.com' });
+      } else {
+        await chrome.tabs.create({ url: 'https://accounts.google.com' });
+      }
     } catch (_) { /* ignore */ }
   }
 
@@ -264,10 +357,17 @@ function sleep(ms) {
 
 // ============== CLEAR ==============
 
-async function clearGoogleCookies() {
+async function clearGoogleCookies(storeIds) {
+  if (!storeIds || !storeIds.length) storeIds = [undefined];
   let removed = 0;
-  try {
-    const all = await chrome.cookies.getAll({});
+  for (const sid of storeIds) {
+    let all = [];
+    try {
+      all = await chrome.cookies.getAll(sid != null ? { storeId: sid } : {});
+    } catch (e) {
+      console.warn('[clearGoogleCookies] getAll', sid, e);
+      continue;
+    }
     for (const c of all) {
       if (!isGoogleDomain(c.domain)) continue;
       const cleanDomain = c.domain.replace(/^\./, '');
@@ -284,8 +384,6 @@ async function clearGoogleCookies() {
         // Có thể fail nếu cookie partitioned hoặc protocol mismatch — skip im lặng.
       }
     }
-  } catch (e) {
-    console.warn('[clearGoogleCookies]', e);
   }
   return removed;
 }
